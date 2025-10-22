@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, Iterable, Iterator, List, Optional
 
 from ..core.engine_base import AnalysisEngine, EngineError
@@ -46,6 +47,11 @@ class QueryService:
         self.engine_kwargs = engine_kwargs or {}
         self._engine: Optional[AnalysisEngine] = None
         self._project: Optional[ProjectModel] = None
+
+        project_root = Path(project_path).resolve()
+        if project_root.is_file():
+            project_root = project_root.parent
+        self._project_root = project_root
 
     def _ensure_engine(self) -> AnalysisEngine:
         if self._engine is None:
@@ -92,10 +98,9 @@ class QueryService:
         self, contract: str, function_signature: str
     ) -> Dict[str, object]:
         """Return function information as a serializable dictionary."""
+        project = self._ensure_project()
         function = self.get_function(contract, function_signature)
-        payload = function.as_dict()
-        payload["metadata"] = self._build_metadata()
-        return payload
+        return function.as_dict(project, self._format_path)
 
     def iter_call_graph(
         self,
@@ -132,12 +137,16 @@ class QueryService:
             )
         ]
 
-    def _build_metadata(self) -> Dict[str, object]:
-        project = self._ensure_project()
-        return {
-            "engine": self.engine_name,
-            "engine_metadata": project.engine_metadata,
-        }
+    def _format_path(self, raw_path: str) -> str:
+        if not raw_path:
+            return raw_path
+        path = Path(raw_path)
+        try:
+            resolved = path.resolve(strict=False)
+        except OSError:
+            resolved = path
+
+        return str(resolved)
 
 
 def create_service(

@@ -39,10 +39,24 @@ def test_list_contracts_includes_sample(sample_service: QueryService):
 
 def test_get_function_source_returns_transfer(sample_service: QueryService):
     result = sample_service.get_function_source("SimpleToken", "transfer(address,uint256)")
+    assert result["contract"] == "SimpleToken"
     assert result["function"] == "transfer(address,uint256)"
     assert "function transfer" in result["source"]
-    assert result["metadata"]["engine"] == "slither"
-    assert result["location"]["file"].endswith("SimpleToken.sol")
+    assert result["location"]["file"].endswith("solidity-fcg-tool/samples/SimpleToken.sol")
+    assert result["location"]["start_line"] == 17
+    assert result["location"]["end_line"] == 20
+
+    params = result["parameter"]
+    assert any(param["name"] == "to" and param["type"] == "address" for param in params)
+    assert any(param["name"] == "amount" and param["type"] == "uint256" for param in params)
+
+    calls = result["calls"]
+    assert calls, "expected at least one call entry"
+    assert any(
+        call["module"] == "SimpleToken"
+        and call["function"].startswith("_performTransfer")
+        for call in calls
+    )
 
 
 def test_call_graph_contains_internal_function(sample_service: QueryService):
@@ -69,7 +83,9 @@ def test_cli_query_outputs_json(sample_project_path: str, capsys: pytest.Capture
         pytest.skip(f"CLI query failed due to environment: {captured.err or captured.out}")
     payload = json.loads(captured.out)
     assert payload["function"] == "transfer(address,uint256)"
-    assert payload["metadata"]["engine"] == "slither"
+    assert payload["location"]["file"].endswith("solidity-fcg-tool/samples/SimpleToken.sol")
+    assert payload["parameter"]
+    assert payload["calls"]
 
 
 def test_cli_call_graph_outputs_edges(sample_project_path: str, capsys: pytest.CaptureFixture[str]):

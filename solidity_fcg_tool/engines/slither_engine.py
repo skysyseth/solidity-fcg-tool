@@ -10,6 +10,7 @@ from ..core.models import (
     CallGraphEdge,
     ContractInfo,
     FunctionIdentifier,
+    FunctionParameter,
     FunctionInfo,
     ProjectModel,
     SourceLocation,
@@ -122,11 +123,13 @@ class SlitherEngine(AnalysisEngine):
         writes = self._normalize_state_variables(getattr(function, "state_variables_written", []))
 
         calls = self._extract_calls(function)
+        parameters = self._convert_parameters(function)
 
         return FunctionInfo(
             identifier=identifier,
             visibility=getattr(function, "visibility", "public"),
             mutability=getattr(function, "view", None) or getattr(function, "mutability", None),
+            parameters=parameters,
             state_variables_read=reads,
             state_variables_written=writes,
             source=source_code,
@@ -249,6 +252,19 @@ class SlitherEngine(AnalysisEngine):
             append_call(callee)
 
         return calls
+
+    def _convert_parameters(self, function) -> List[FunctionParameter]:
+        parameters = []
+        for parameter in getattr(function, "parameters", []) or []:
+            param_type = getattr(parameter, "type", None)
+            param_name = getattr(parameter, "name", None)
+            parameters.append(
+                FunctionParameter(
+                    name=str(param_name) if param_name else "",
+                    type=str(param_type) if param_type else "",
+                )
+            )
+        return parameters
 
     @staticmethod
     def _iterate_attribute(obj, names: Tuple[str, ...]) -> Iterable:

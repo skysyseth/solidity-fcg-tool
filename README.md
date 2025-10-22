@@ -18,6 +18,7 @@ pip install -r requirements.txt
 > 需要本地安装对应版本的 `solc`。可通过 `py-solc-x` 下载或使用系统已有编译器。
 
 ## CLI 示例
+### 函数源码
 ```bash
 python -m solidity_fcg_tool \
   --project samples/SimpleToken.sol \
@@ -28,12 +29,52 @@ python -m solidity_fcg_tool \
 ```
 返回数据包含函数源码、位置、调用关系及元信息。
 
+样例输出（缩略）：
+```json
+{
+  "contract": "SimpleToken",
+  "function": "transfer(address,uint256)",
+  "source": "    function transfer(address to, uint256 amount) external returns (bool) {\n        _performTransfer(msg.sender, to, amount);\n        return true;\n    }\n",
+  "location": {
+    "file": "/absolute/path/to/solidity-fcg-tool/samples/SimpleToken.sol",
+    "start_line": 17,
+    "end_line": 20
+  },
+  "parameter": [
+    { "name": "to", "type": "address" },
+    { "name": "amount", "type": "uint256" }
+  ],
+  "calls": [
+    {
+      "file": "/Audit/solidity-fcg-tool/samples/SimpleToken.sol",
+      "module": "SimpleToken",
+      "function": "_performTransfer(address,address,uint256)"
+    }
+  ]
+}
+```
+
 生成调用图：
 ```bash
 python -m solidity_fcg_tool \
   --project samples/SimpleToken.sol \
   call-graph \
   --contract SimpleToken
+```
+
+样例输出（缩略）：
+```json
+{
+  "edges": [
+    {
+      "caller": "SimpleToken.transfer(address,uint256)",
+      "callee": "SimpleToken._performTransfer(address,address,uint256)"
+    }
+  ],
+  "metadata": {
+    "engine": "slither"
+  }
+}
 ```
 
 ## Python API
