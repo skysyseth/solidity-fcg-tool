@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "solidity-fcg-tool"
+version = "0.1.0"
+description = "Solidity function call graph and source extraction toolkit with pluggable engines."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+authors = [
+  { name = "solidity-fcg-tool maintainers" }
+]
+keywords = ["solidity", "static-analysis", "call-graph", "slither", "blockchain"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Libraries",
+  "Topic :: Security",
+]
+dependencies = [
+  "slither-analyzer>=0.10.0",
+  "crytic-compile>=0.3.4",
+  "py-solc-x>=1.1.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "build>=1.2.1",
+  "twine>=5.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/skysyseth/solidity-fcg-tool"
+Documentation = "https://github.com/skysyseth/solidity-fcg-tool#readme"
+Changelog = "https://github.com/skysyseth/solidity-fcg-tool/blob/main/CHANGELOG.md"
+
+[tool.setuptools.packages.find]
+include = ["solidity_fcg_tool*"]
+
+[tool.setuptools.package-data]
+solidity_fcg_tool = []
+
+[tool.setuptools]
+include-package-data = true
+license-files = ["LICENSE"]

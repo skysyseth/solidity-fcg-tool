@@ -1,24 +1,31 @@
 # solidity-fcg-tool
 
-Solidity Function Call Graph (FCG) 工具，提供模块/函数级别的解析能力，为 AI 框架或上层分析服务提供结构化数据。首版基于 [Slither](https://github.com/crytic/slither)，并预留了解析引擎的抽象层，后续可替换或并存 Tree-sitter、Solar 等实现。
+`solidity-fcg-tool` packages a Solidity static analysis workflow that extracts module/function source code and call graph data. The first release uses [Slither](https://github.com/crytic/slither) under the hood, while keeping the analysis engine pluggable so Tree-sitter, Solar, or other backends can be added later.
 
-## 特性
-- 统一引擎接口：`core.engine_base.AnalysisEngine` 定义抽象，支持可插拔解析器。
-- 丰富数据模型：函数源码、状态变量读写、调用关系、位置信息等。
-- 高层服务接口：`services.query.QueryService` 提供 Python API；CLI 输出 JSON。
-- 可扩展架构：引擎注册表支持未来新增 Tree-sitter/Solar，业务层无需改动。
+## Features
+- **Engine abstraction** – `core.engine_base.AnalysisEngine` defines the contract for all engines and allows hot-swapping implementations.
+- **Rich data model** – function source, parameters, state variable access, locations, and call relationships.
+- **Service layer** – `services.query.QueryService` exposes Python APIs plus a JSON-emitting CLI for downstream tooling (e.g., AI assistants).
+- **Extensible registry** – register additional engines without touching higher-level services.
 
-## 安装
+## Installation
+Once published, install via pip:
+```bash
+pip install solidity-fcg-tool
+```
+
+For local development:
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+pip install -e .[dev]
 ```
 
-> 需要本地安装对应版本的 `solc`。可通过 `py-solc-x` 下载或使用系统已有编译器。
+> A compatible `solc` binary is required. Install with `py-solc-x` or reuse an existing compiler on your system.
 
-## CLI 示例
-### 函数源码
+## CLI Usage
+### Function source lookup
 ```bash
 python -m solidity_fcg_tool \
   --project samples/SimpleToken.sol \
@@ -27,9 +34,7 @@ python -m solidity_fcg_tool \
   --contract SimpleToken \
   --function "transfer(address,uint256)"
 ```
-返回数据包含函数源码、位置、调用关系及元信息。
-
-样例输出（缩略）：
+Example (truncated) response:
 ```json
 {
   "contract": "SimpleToken",
@@ -46,7 +51,7 @@ python -m solidity_fcg_tool \
   ],
   "calls": [
     {
-      "file": "/Audit/solidity-fcg-tool/samples/SimpleToken.sol",
+      "file": "/absolute/path/to/solidity-fcg-tool/samples/SimpleToken.sol",
       "module": "SimpleToken",
       "function": "_performTransfer(address,address,uint256)"
     }
@@ -54,15 +59,14 @@ python -m solidity_fcg_tool \
 }
 ```
 
-生成调用图：
+### Call graph extraction
 ```bash
 python -m solidity_fcg_tool \
   --project samples/SimpleToken.sol \
   call-graph \
   --contract SimpleToken
 ```
-
-样例输出（缩略）：
+Sample output:
 ```json
 {
   "edges": [
@@ -89,7 +93,7 @@ result = get_function_source(
 print(result["source"])
 ```
 
-或使用 `QueryService` 保持引擎实例：
+For repeated queries, keep the service instance alive:
 ```python
 from solidity_fcg_tool.services.query import create_service
 
@@ -98,24 +102,36 @@ info = service.get_function_source("SimpleToken", "transfer(address,uint256)")
 edges = service.get_call_graph(caller_contract="SimpleToken")
 ```
 
-## 项目结构
-- `docs/requirements.md`：需求与设计文档。
-- `solidity_fcg_tool/core`：引擎抽象与数据模型。
-- `solidity_fcg_tool/engines`：引擎注册表与 Slither 适配器。
-- `solidity_fcg_tool/services`：对外查询服务。
-- `samples/`：示例 Solidity 合约。
-- `tests/`：基础单元测试与回归入口。
+## Project Layout
+- `solidity_fcg_tool/core` – engine abstractions and shared models.
+- `solidity_fcg_tool/engines` – registry and the Slither-backed engine.
+- `solidity_fcg_tool/services` – public query service and helpers.
+- `samples/` – example Solidity contracts.
+- `tests/` – pytest-based regression suite.
 
-## 扩展引擎指南
-实现自定义解析器时：
-1. 继承 `AnalysisEngine`，实现 `load()`、`_iter_call_graph_impl()` 等接口。
-2. 将解析结果写入 `ProjectModel`/`ContractInfo`/`FunctionInfo` 数据结构。
-3. 在 `solidity_fcg_tool/engines/__init__.py` 或自定义模块中调用 `register_engine("name", EngineClass)`.
-4. 通过 CLI 的 `--engine name` 或 `create_service(..., engine_name="name")` 使用。
+## Extending Engines
+1. Implement `AnalysisEngine`, filling in `load()` and (optionally) `_iter_call_graph_impl()`.
+2. Populate `ProjectModel` / `ContractInfo` / `FunctionInfo` with the new engine’s data.
+3. Register the engine via `register_engine("my-engine", MyEngineClass)`.
+4. Use it through `--engine my-engine` (CLI) or `create_service(..., engine_name="my-engine")`.
 
-## 开发与测试
+## Release Notes
+See the [CHANGELOG](CHANGELOG.md) for a detailed history of updates.
+
+## Development & Tests
 ```bash
 pytest
 ```
 
-> 若未安装 Slither，可先运行不依赖引擎的测试；与 Slither 相关的功能在运行时会给出友好提示。
+> If Slither or `solc` is missing, API/CLI tests will be skipped with an informative message.
+
+For more details in Chinese, please read `README_zh.md`.
+
+## Publishing
+To build and upload a release:
+```bash
+pip install -e .[dev]
+python -m build
+python -m twine check dist/*
+python -m twine upload dist/*
+```
